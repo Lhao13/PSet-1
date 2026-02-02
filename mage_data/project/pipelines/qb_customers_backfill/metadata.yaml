@@ -3,31 +3,28 @@ blocks:
   color: blue
   configuration: {}
   downstream_blocks:
-  - extract_qbo_customers
+  - extract_qbo_customers_1
   executor_config: null
   executor_type: local_python
   has_callback: false
   language: python
-  name: segment_date_range
-  retry_config:
-    delay: 60
-    exponential_backoff: true
-    retries: 3
+  name: segment_date_range_1
+  retry_config: null
   status: executed
   timeout: null
   type: custom
   upstream_blocks: []
-  uuid: segment_date_range
+  uuid: segment_date_range_1
 - all_upstream_blocks_executed: true
   color: blue
   configuration: {}
   downstream_blocks:
-  - extract_qbo_customers
+  - extract_qbo_customers_1
   executor_config: null
   executor_type: local_python
   has_callback: false
   language: python
-  name: get_qbo_access_token
+  name: get_qbo_access_token_1
   retry_config:
     delay: 60
     exponential_backoff: true
@@ -36,20 +33,20 @@ blocks:
   timeout: null
   type: custom
   upstream_blocks: []
-  uuid: get_qbo_access_token
+  uuid: get_qbo_access_token_1
 - all_upstream_blocks_executed: true
   color: null
   configuration:
     file_path: data_loaders/extract_qbo_customers.py
     file_source:
-      path: data_loaders/extract_qbo_customers.py
+      path: data_loaders/extract_qbo_customers_1.py
   downstream_blocks:
-  - load_raw_customers
+  - load_raw_customers_1
   executor_config: null
   executor_type: local_python
   has_callback: false
   language: python
-  name: extract_qbo_customers
+  name: extract_qbo_customers_1
   retry_config:
     delay: 60
     exponential_backoff: true
@@ -58,21 +55,21 @@ blocks:
   timeout: null
   type: data_loader
   upstream_blocks:
-  - segment_date_range
-  - get_qbo_access_token
-  uuid: extract_qbo_customers
+  - segment_date_range_1
+  - get_qbo_access_token_1
+  uuid: extract_qbo_customers_1
 - all_upstream_blocks_executed: true
   color: null
   configuration:
     file_path: data_exporters/load_raw_customers.py
     file_source:
-      path: data_exporters/load_raw_customers.py
+      path: data_exporters/load_raw_customers_1.py
   downstream_blocks: []
   executor_config: null
   executor_type: local_python
   has_callback: false
   language: python
-  name: load_raw_customers
+  name: load_raw_customers_1
   retry_config:
     delay: 60
     exponential_backoff: true
@@ -81,8 +78,8 @@ blocks:
   timeout: null
   type: data_exporter
   upstream_blocks:
-  - extract_qbo_customers
-  uuid: load_raw_customers
+  - extract_qbo_customers_1
+  uuid: load_raw_customers_1
 cache_block_output_in_memory: false
 callbacks: []
 concurrency_config: {}

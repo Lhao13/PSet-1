@@ -9,6 +9,7 @@ from mage_ai.data_preparation.shared.secrets import get_secret_value
 if 'data_loader' not in globals():
     from mage_ai.data_preparation.decorators import data_loader
 
+
 logger = logging.getLogger("qbo_pipeline")
 logger.setLevel(logging.INFO)
 
@@ -21,7 +22,6 @@ if not logger.handlers:
     logger.addHandler(handler)
 
 
-
 @data_loader
 def execute(*args, **kwargs):
 
@@ -29,15 +29,15 @@ def execute(*args, **kwargs):
     total_pages = 0
     total_records = 0
 
-    logger.info("[AUTH] Starting QBO extraction")
-    
-    segments = args[0]
-    access_token = args[1]
+    logger.info("[AUTH] Starting QBO Invoice extraction")
 
-    if isinstance(segments, str): 
+    access_token = args[1]
+    segments = args[0]
+
+    if isinstance(segments, str):
         segments = json.loads(segments)
 
-    if isinstance(segments, dict): 
+    if isinstance(segments, dict):
         segments = [segments]
 
     realm_id = get_secret_value("QBO_REALM_ID")
@@ -53,10 +53,10 @@ def execute(*args, **kwargs):
     session = requests.Session()
 
     retry_strategy = Retry(
-        total=5,  
-        backoff_factor=2,  
+        total=5,
+        backoff_factor=2,
         status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["POST"],  
+        allowed_methods=["POST"],
         raise_on_status=False
     )
 
@@ -74,7 +74,7 @@ def execute(*args, **kwargs):
         segment_pages = 0
         segment_records = 0
 
-        logger.info(f"[EXTRACT] Segment started -> {start} to {end}")
+        logger.info(f"[EXTRACT] Invoice segment -> {start} to {end}")
 
         start_position = 1
         page_size = 100
@@ -82,14 +82,12 @@ def execute(*args, **kwargs):
         while True:
 
             query = f"""
-                SELECT * FROM Invoice 
-                WHERE MetaData.LastUpdatedTime >= '{start}' 
+                SELECT * FROM Invoice
+                WHERE MetaData.LastUpdatedTime >= '{start}'
                 AND MetaData.LastUpdatedTime < '{end}'
                 STARTPOSITION {start_position}
                 MAXRESULTS {page_size}
             """
-
-            print("QUERY:", query)
 
             try:
                 response = session.post(
@@ -100,7 +98,7 @@ def execute(*args, **kwargs):
                 )
 
             except requests.exceptions.RequestException as e:
-                print("Network error:", str(e))
+                logger.error(f"[NETWORK_ERROR] {str(e)}")
                 raise
 
             if response.status_code != 200:
@@ -109,14 +107,15 @@ def execute(*args, **kwargs):
 
             data = response.json()
 
-            invoices = data.get("QueryResponse", {}).get("invoicer", [])
+            invoices = data.get("QueryResponse", {}).get("Invoice", [])
 
+            # 🔥 MUY IMPORTANTE — QuickBooks a veces devuelve dict
             if isinstance(invoices, dict):
                 invoices = [invoices]
 
             if not invoices:
                 break
-            
+
             segment_pages += 1
             total_pages += 1
 
@@ -125,10 +124,10 @@ def execute(*args, **kwargs):
 
             page_number = ((start_position - 1) // page_size) + 1
 
-            for cust in invoices:
+            for inv in invoices:
                 all_records.append({
-                    "id": cust["Id"],
-                    "payload": cust,
+                    "id": inv["Id"],
+                    "payload": inv,
                     "window_start": start,
                     "window_end": end,
                     "page_number": page_number,
@@ -147,16 +146,18 @@ def execute(*args, **kwargs):
 
         logger.info(
             f"[EXTRACT_METRICS] "
+            f"entity=Invoice | "
             f"segment={start}->{end} | "
             f"records={segment_records} | "
             f"pages={segment_pages} | "
             f"duration={segment_duration}s"
         )
-    
+
     total_duration = round(time.time() - pipeline_start, 2)
 
     logger.info(
         f"[PIPELINE_METRICS] "
+        f"entity=Invoice | "
         f"total_records={total_records} | "
         f"total_pages={total_pages} | "
         f"duration={total_duration}s"
@@ -165,3 +166,4 @@ def execute(*args, **kwargs):
     print(f"Invoices extracted: {len(all_records)}")
 
     return all_records
+
