@@ -26,7 +26,54 @@ La solución sigue una arquitectura **EL (Extract → Load)** desacoplada:
 
 ## Diagrama de arquitectura
 
+```mermaid
+flowchart LR
 
+    subgraph QBO[QuickBooks Online API]
+        API[QBO Entities<br>Customers / Items / Invoices]
+    end
+
+    subgraph Mage[Mage.ai Pipelines]
+        Trig[Generador de segmentos]
+
+        Segmentation[Generador<br>Token 100 dias]
+
+        Extract[Data Loader<br>
+        • Pagination<br>
+        • Retry + Backoff<br>
+        • Manejo de limites<br>
+        • Logs]
+
+        Load[Data Exporter<br>
+        • UPSERT<br>
+        • Indepotenciay<br>
+        • Logs]
+    end
+
+    subgraph Secrets[Secrets Manager]
+        OAuth[OAuth Token]
+        Realm[Realm ID]
+        PG[Postgres Credentials]
+    end
+
+    subgraph DB[PostgreSQL]
+        RAW[(RAW Schema<br>qb_customers<br>qb_items<br>qb_invoices)]
+    end
+
+    Trigger-->Trig
+    Trigger-->Segmentation
+    Trig --> Extract
+    Segmentation --> Extract
+    Extract --> Load
+    Load --> RAW
+
+    OAuth --> Extract
+    Realm --> Extract
+    PG --> Load
+
+    API --> Extract
+
+```
 
 #  Levantar el proyecto
 
